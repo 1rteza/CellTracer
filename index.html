@@ -1531,8 +1531,8 @@ function LogTab({ entries, sessions, onDelete, onEdit }){
               <div style={{ fontSize:11.5, fontWeight:600, color:C.textFaint, letterSpacing:0.4, margin:"10px 2px 0", textTransform:"uppercase" }}>{label}</div>
             )}
             <SwipeableRow hint={i===0} onEdit={()=>onEdit(e)} onDelete={()=>onDelete(e.id)}>
-              <Panel style={{ padding:12, display:"flex", alignItems:"center", gap:12, borderLeft:`3px solid ${accentColor}`, background: washColor ? mixHex(washColor, C.panel, 0.22) : C.panel }}>
-                <div style={{ width:40, height:40, borderRadius:10, background: washColor ? mixHex(washColor, C.panel, 0.4) : C.panel2, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Panel style={{ padding:12, display:"flex", alignItems:"center", gap:12, borderLeft:`3px solid ${accentColor}`, background:C.panel }}>
+                <div style={{ width:40, height:40, borderRadius:10, background: washColor ? mixHex(washColor, C.panel2, 0.35) : C.panel2, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                   <BatteryIcon percentage={e.percentage} charging={e.charging} size={20}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
