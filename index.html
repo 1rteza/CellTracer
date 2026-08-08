@@ -1509,6 +1509,8 @@ const INTENSITY_STYLE = {
 function LogTab({ entries, sessions, onDelete, onEdit }){
   const reversed = [...entries].reverse();
   if (!reversed.length) return <EmptyChart text="No readings logged yet. Tap the + button to add your first one."/>;
+  const intensityById = {};
+  (sessions||[]).forEach(s=>{ if (s.id) intensityById[s.id] = s.intensity; });
   let lastDay = null;
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1516,6 +1518,8 @@ function LogTab({ entries, sessions, onDelete, onEdit }){
         const label = dayLabel(e.timestamp);
         const showSeparator = label !== lastDay;
         lastDay = label;
+        const intensity = e.charging ? null : intensityById[e.id];
+        const style = intensity ? INTENSITY_STYLE[intensity] : null;
         return (
           <React.Fragment key={e.id}>
             {showSeparator && (
@@ -1533,6 +1537,7 @@ function LogTab({ entries, sessions, onDelete, onEdit }){
                   </div>
                   <div style={{ display:"flex", gap:10, marginTop:3, flexWrap:"wrap" }}>
                     {e.charging && <Tag text="charging"/>}
+                    {style && style.label && <Tag text={style.label} color={style.color}/>}
                     {e.screenOnTime!=null && <Tag icon="clock" text={`${e.screenOnTime}h SOT`}/>}
                     {e.temperature!=null && <Tag icon="thermometer" text={`${e.temperature}°C`}/>}
                     {e.reportedHealth!=null && <Tag text={`OS health ${e.reportedHealth}%`}/>}
