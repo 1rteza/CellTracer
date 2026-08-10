@@ -380,6 +380,67 @@ firebase.initializeApp(firebaseConfig);
 
 const STORAGE_KEY = (fbUid) => `celltrace:battery-data-v1:${fbUid}`;
 const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2));
+
+// Builds demo devices + entries with timestamps relative to "now", so the demo
+// always looks current no matter when someone tries it. Two devices with
+// deliberately different health trends so Dashboard, Log, and Compare all have
+// something meaningful to show.
+function buildDemoData(){
+  const now = Date.now();
+  const H = 3600000, D = 86400000;
+  const dev1Id = uid(), dev2Id = uid();
+  const entries = [];
+
+  // cyclesAgoDays: how many days ago each charge-cycle happened (oldest first)
+  // dropsPerCycle: the % drop across each of the 3 drain readings in that cycle (8h apart)
+  function buildDevice(deviceId, cyclesAgoDays, dropsPerCycle, sessionTypes, sotByStep){
+    cyclesAgoDays.forEach((daysAgo, ci) => {
+      const chargeHoursAgo = daysAgo*24 + 4;
+      entries.push({
+        id: uid(), deviceId, timestamp: new Date(now - chargeHoursAgo*H).toISOString(),
+        percentage: 100, charging: true, screenOnTime: null, temperature: null, reportedHealth: null, note: null, sessionType: null,
+      });
+      let pct = 100;
+      const drops = dropsPerCycle[ci];
+      drops.forEach((drop, si) => {
+        pct -= drop;
+        const hoursAgo = chargeHoursAgo - (si+1)*8;
+        entries.push({
+          id: uid(), deviceId, timestamp: new Date(now - hoursAgo*H).toISOString(),
+          percentage: pct, charging: false,
+          screenOnTime: sotByStep[ci][si], temperature: 28 + Math.round(Math.random()*6), reportedHealth: null,
+          note: null, sessionType: sessionTypes[ci][si],
+        });
+      });
+    });
+  }
+
+  // Device 1: recently purchased, stable/healthy — near-constant drain rate across all cycles.
+  buildDevice(
+    dev1Id,
+    [15, 12, 9, 6, 3],
+    [[13,13,14],[14,13,13],[13,14,13],[14,13,14],[13,13,14]],
+    [["idle","heavy","light"],["idle","light","heavy"],["heavy","idle","light"],["light","heavy","idle"],["idle","light","heavy"]],
+    [[0.2,3.4,2.0],[0.15,2.1,3.3],[3.6,0.25,2.2],[2.3,3.5,0.2],[0.2,2.0,3.4]]
+  );
+
+  // Device 2: owned long before logging began, visibly worn — drain rate climbs
+  // from the oldest cycle to the most recent one (genuine degradation trend).
+  buildDevice(
+    dev2Id,
+    [15, 12, 9, 6, 3],
+    [[8,8,9],[10,10,11],[12,12,13],[14,14,15],[16,16,17]],
+    [["idle","light","heavy"],["idle","heavy","light"],["light","idle","heavy"],["heavy","idle","light"],["idle","heavy","light"]],
+    [[0.2,2.2,3.1],[0.15,3.3,2.0],[2.4,0.2,3.2],[3.6,0.2,2.1],[0.2,3.4,2.2]]
+  );
+
+  const devices = [
+    { id: dev1Id, name: "Demo: Pixel 9", ratedCapacity: 4700, purchaseDate: new Date(now-18*D).toISOString().slice(0,10) },
+    { id: dev2Id, name: "Demo: Galaxy S22", ratedCapacity: 3700, purchaseDate: new Date(now-2*365*D).toISOString().slice(0,10) },
+  ];
+  return { devices, entries };
+}
+function isDemoDevice(device){ return !!device && typeof device.name==="string" && device.name.startsWith("Demo:"); }
 const nowLocal = () => { const d = new Date(); d.setSeconds(0,0); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 const toLocalInput = (iso) => { const d = new Date(iso); d.setSeconds(0,0); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 
@@ -1179,6 +1240,12 @@ function BatteryTracker({ user, onSignOut }){
   }, [data, dataKey, user]);
 
   const addDevice = (device) => { persist(base=>({ ...base, devices:[...base.devices, device] })); setSelectedDeviceId(device.id); pushToast("Device added"); };
+  const loadDemoData = () => {
+    const demo = buildDemoData();
+    persist(()=>demo);
+    setSelectedDeviceId(demo.devices[0].id);
+    pushToast("Demo devices added");
+  };
   const deleteDevice = (id) => {
     persist(base=>({ devices: base.devices.filter(d=>d.id!==id), entries: base.entries.filter(e=>e.deviceId!==id) }));
     if (selectedDeviceId===id) { const remaining=data.devices.filter(d=>d.id!==id); setSelectedDeviceId(remaining[0]?.id ?? null); }
@@ -1238,7 +1305,7 @@ function BatteryTracker({ user, onSignOut }){
 
       {view==="app" && (!selectedDevice ? (
         <>
-          <EmptyState onAddDevice={()=>setShowDeviceForm(true)}/>
+          <EmptyState onAddDevice={()=>setShowDeviceForm(true)} onTryDemo={loadDemoData}/>
           <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px" }}>
             <Footer onShowPrivacy={()=>setShowPrivacy(true)}/>
           </div>
@@ -1256,6 +1323,12 @@ function BatteryTracker({ user, onSignOut }){
           )}
 
           <div style={{ padding:16, maxWidth:720, margin:"0 auto", paddingBottom:8 }}>
+            {isDemoDevice(selectedDevice) && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 12px", borderRadius:10, background:C.panel2, border:`1px solid ${C.border}`, marginBottom:14, fontSize:12, color:C.textMuted }}>
+                <Icon name="alertTriangle" size={14} color={C.textFaint}/>
+                <span>This is sample data. Ready to track your own phone? Delete demo devices anytime from the device picker above.</span>
+              </div>
+            )}
             {tab==="dashboard" && <Dashboard device={selectedDevice} entries={deviceEntries} health={health}/>}
             {tab==="log" && <LogTab entries={deviceEntries} sessions={health.sessions} onDelete={requestDeleteEntry} onEdit={setEditingEntry}/>}
             {tab==="compare" && <CompareTab devices={data.devices} entries={data.entries} onSelect={(id)=>{ setSelectedDeviceId(id); setTab("dashboard"); }}/>}
@@ -1320,13 +1393,16 @@ function SyncIndicator({ status, cloudStatus }){
   );
 }
 
-function EmptyState({ onAddDevice }){
+function EmptyState({ onAddDevice, onTryDemo }){
   return (
     <div style={{ padding:"60px 20px", textAlign:"center" }}>
       <div style={{ position:"relative", height:60, marginBottom:20, maxWidth:300, margin:"0 auto 20px" }}><ScopeTrace/></div>
       <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, marginBottom:8 }}>No device yet</h2>
       <p style={{ color:C.textMuted, fontSize:14, marginBottom:20, maxWidth:320, marginInline:"auto" }}>Add a phone with its rated battery capacity to start logging charge readings and tracking degradation over time.</p>
       <Button onClick={onAddDevice}><Icon name="plus" size={15}/> Add a device</Button>
+      <div style={{ marginTop:14 }}>
+        <button onClick={onTryDemo} style={{ background:"none", border:"none", color:C.textMuted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Or try it with demo devices</button>
+      </div>
     </div>
   );
 }
