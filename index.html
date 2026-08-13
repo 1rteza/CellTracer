@@ -7,10 +7,19 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>CellTracer</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0D11'/%3E%3Cpolygon points='13,3 5,14 11,14 10,21 19,10 13,10' fill='%2345D9C3'/%3E%3C/svg%3E" />
+<title>CellTracer — Battery Health Tracker</title>
+<meta name="description" content="Track how your phone's battery is really aging — logged by you, analyzed automatically, synced across every device you own." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="CellTracer — Battery Health Tracker" />
+<meta property="og:description" content="Track how your phone's battery is really aging — logged by you, analyzed automatically, synced across every device you own." />
+<meta property="og:image" content="/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="CellTracer — Battery Health Tracker" />
+<meta name="twitter:description" content="Track how your phone's battery is really aging — logged by you, analyzed automatically." />
+<meta name="twitter:image" content="/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0D11'/%3E%3Cpolygon points='13,3 5,14 11,14 10,21 19,10 13,10' fill='%23C2653C'/%3E%3C/svg%3E" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; background: #0B0D11; }
   body { overscroll-behavior-y: none; }
@@ -353,6 +362,7 @@ const C = {
   blue: "#6C9BF0",
   violet: "#A78BFA",
   orange: "#F0803E",
+  clay: "#C2653C", clayDim: "#42281B",
 };
 
 // Blends a color into a base at the given ratio, returning a fully OPAQUE hex color.
@@ -782,7 +792,7 @@ function StatBlock({ label, value, unit, sub, color }){
 }
 function Button({ children, onClick, variant="primary", style, type="button", disabled }){
   const base={ fontFamily:"'Inter',sans-serif", fontSize:13.5, fontWeight:600, borderRadius:10, padding:"9px 16px", display:"inline-flex", alignItems:"center", gap:6, cursor: disabled?"not-allowed":"pointer", border:"1px solid transparent", transition:"opacity .15s, transform .1s", opacity: disabled?0.5:1 };
-  const variants={ primary:{ background:C.teal, color:"#06231F", boxShadow:"0 4px 14px rgba(69,217,195,0.22)" }, ghost:{ background:"transparent", color:C.text, border:`1px solid ${C.border}` }, danger:{ background:"transparent", color:C.red, border:`1px solid ${C.redDim}` } };
+  const variants={ primary:{ background:C.clay, color:"#2A140A", boxShadow:"0 4px 14px rgba(194,101,60,0.26)" }, ghost:{ background:"transparent", color:C.text, border:`1px solid ${C.border}` }, danger:{ background:"transparent", color:C.red, border:`1px solid ${C.redDim}` } };
   return (
     <button type={type} onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}
       onMouseEnter={e=>e.currentTarget.style.opacity=0.85}
@@ -802,7 +812,7 @@ function Modal({ title, onClose, children }){
     <div style={{ position:"fixed", inset:0, background:"rgba(6,8,11,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:50 }} onClick={onClose}>
       <div style={{ background:C.panel, border:`1px solid ${C.border}`, borderRadius:"16px 16px 0 0", width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", padding:20 }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:17, fontWeight:600, color:C.text, margin:0 }}>{title}</h3>
+          <h3 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:17, fontWeight:600, color:C.text, margin:0 }}>{title}</h3>
           <button onClick={onClose} style={{ background:"none", border:"none", color:C.textMuted, cursor:"pointer", padding:4 }}><Icon name="x" size={18}/></button>
         </div>
         {children}
@@ -835,10 +845,10 @@ function AboutScreen({ onEnterApp, onShowPrivacy }){
     <div style={{ maxWidth:720, margin:"0 auto", padding:"20px 16px 40px" }}>
       <Panel style={{ padding:22 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:`linear-gradient(135deg, ${C.tealDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <svg width="19" height="19" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.teal}/></svg>
+          <div style={{ width:36, height:36, borderRadius:10, background:`linear-gradient(135deg, ${C.clayDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <svg width="19" height="19" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.clay}/></svg>
           </div>
-          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, fontWeight:700, margin:0 }}>What is CellTracer?</h2>
+          <h2 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:20, fontWeight:700, margin:0 }}>What is CellTracer?</h2>
         </div>
         <p style={{ fontSize:13.5, color:C.textMuted, lineHeight:1.6, margin:"0 0 16px" }}>
           CellTracer is a personal battery-health tracker. You log your battery percentage over time — no special hardware or root access needed — and it estimates how much your battery has worn down, synced across every device you're signed into.
@@ -846,11 +856,11 @@ function AboutScreen({ onEnterApp, onShowPrivacy }){
         <Button onClick={onEnterApp} variant="ghost" style={{ width:"100%", justifyContent:"center", marginBottom:20 }}>
           <Icon name="chevronDown" size={13} style={{ transform:"rotate(-90deg)" }}/> Skip ahead to dashboard
         </Button>
-        <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14.5, fontWeight:600, margin:"18px 0 8px", color:C.text }}>How it estimates health</h3>
+        <h3 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:14.5, fontWeight:600, margin:"18px 0 8px", color:C.text }}>How it estimates health</h3>
         <p style={{ fontSize:13.5, color:C.textMuted, lineHeight:1.6, margin:"0 0 14px" }}>
           Every phone's battery drains a little faster as it wears down. CellTracer looks at how fast yours has been draining recently and compares that to older readings — the same basic idea phone manufacturers use for their own "battery health" number, just built from patterns you log instead of an internal sensor. It pays extra attention to idle/overnight readings specifically, since those aren't muddied by however you happened to be using the phone that day.
         </p>
-        <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14.5, fontWeight:600, margin:"18px 0 8px", color:C.text }}>Getting a reliable number</h3>
+        <h3 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:14.5, fontWeight:600, margin:"18px 0 8px", color:C.text }}>Getting a reliable number</h3>
         <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
           {tips.map((t,i)=>(
             <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
@@ -946,7 +956,7 @@ function ConfirmDialog({ title, message, confirmLabel="Delete", onConfirm, onCan
       <div style={{ background:C.panel, border:`1px solid ${C.border}`, borderRadius:16, padding:20, maxWidth:340, width:"100%" }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
           <Icon name="alertTriangle" size={16} color={C.red}/>
-          <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:16, fontWeight:600, margin:0, color:C.text }}>{title}</h3>
+          <h3 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:16, fontWeight:600, margin:0, color:C.text }}>{title}</h3>
         </div>
         <p style={{ fontSize:13, color:C.textMuted, lineHeight:1.5, marginBottom:18 }}>{message}</p>
         <div style={{ display:"flex", gap:8 }}>
@@ -1052,13 +1062,13 @@ function LoginScreen(){
   ];
 
   return (
-    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.text, fontFamily:"'Inter',sans-serif", background:`radial-gradient(900px circle at 15% -8%, rgba(69,217,195,0.09), transparent 55%), radial-gradient(700px circle at 100% 0%, rgba(108,155,240,0.08), transparent 50%), ${C.bg}`, padding:20 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.text, fontFamily:"'Inter',sans-serif", background:`radial-gradient(600px circle at 85% 105%, rgba(194,101,60,0.05), transparent 60%), ${C.bg}`, padding:20 }}>
       <LandingPreview/>
       <div style={{ width:"100%", maxWidth:360, background:C.panel, border:`1px solid ${C.border}`, borderRadius:18, padding:"32px 28px", textAlign:"center" }}>
-        <div style={{ width:52, height:52, borderRadius:14, margin:"0 auto 18px", background:`linear-gradient(135deg, ${C.tealDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <svg width="26" height="26" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.teal}/></svg>
+        <div style={{ width:52, height:52, borderRadius:14, margin:"0 auto 18px", background:`linear-gradient(135deg, ${C.clayDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.clay}/></svg>
         </div>
-        <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:22, fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>CELLTRACER</div>
+        <div style={{ fontFamily:"'Fraunces',sans-serif", fontSize:22, fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>CELLTRACER</div>
         <p style={{ fontSize:13, color:C.textMuted, marginBottom:20, lineHeight:1.5 }}>Track how your phone's battery is really aging — logged by you, analyzed automatically.</p>
 
         <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24, textAlign:"left" }}>
@@ -1277,14 +1287,14 @@ function BatteryTracker({ user, onSignOut }){
   if (!loaded) return <DashboardSkeleton/>;
 
   return (
-    <div style={{ minHeight:"100vh", color:C.text, fontFamily:"'Inter',sans-serif", background:`radial-gradient(900px circle at 15% -8%, rgba(69,217,195,0.07), transparent 55%), radial-gradient(700px circle at 100% 0%, rgba(108,155,240,0.06), transparent 50%), ${C.bg}` }}>
+    <div style={{ minHeight:"100vh", color:C.text, fontFamily:"'Inter',sans-serif", background:`radial-gradient(600px circle at 85% 105%, rgba(194,101,60,0.04), transparent 60%), ${C.bg}` }}>
       <div style={{ borderBottom:`1px solid ${C.border}`, padding:"14px 16px 12px", position:"sticky", top:0, zIndex:10, background:"rgba(11,13,17,0.82)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
           <button onClick={()=>setView("home")} style={{ display:"flex", alignItems:"center", gap:8, minWidth:0, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-            <div style={{ width:26, height:26, borderRadius:8, background:`linear-gradient(135deg, ${C.tealDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.teal}/></svg>
+            <div style={{ width:26, height:26, borderRadius:8, background:`linear-gradient(135deg, ${C.clayDim}, ${C.panel2})`, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="13,2 3,14 10,14 9,22 21,8 12,8" fill={C.clay}/></svg>
             </div>
-            <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:17, fontWeight:700, letterSpacing:0.4, whiteSpace:"nowrap", color:C.text }}>CELLTRACER</span>
+            <span style={{ fontFamily:"'Fraunces',sans-serif", fontSize:17, fontWeight:700, letterSpacing:0.4, whiteSpace:"nowrap", color:C.text }}>CELLTRACER</span>
           </button>
           <div style={{ display:"flex", alignItems:"center", gap:2, flexShrink:0 }}>
             <button onClick={()=>setShowBackup(true)} title="Backup & restore" style={{ background:"none", border:"none", cursor:"pointer", padding:8, color:C.textMuted, display:"flex" }}><Icon name="settings" size={17}/></button>
@@ -1338,8 +1348,8 @@ function BatteryTracker({ user, onSignOut }){
             <Footer onShowPrivacy={()=>setShowPrivacy(true)}/>
           </div>
 
-          <button onClick={()=>setShowEntryForm(true)} style={{ position:"fixed", bottom: isDesktop?22:78, right:18, width:54, height:54, borderRadius:"50%", background:C.teal, border:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 20px rgba(69,217,195,0.35)", cursor:"pointer", zIndex:25 }}>
-            <Icon name="plus" size={24} color="#06231F"/>
+          <button onClick={()=>setShowEntryForm(true)} style={{ position:"fixed", bottom: isDesktop?22:78, right:18, width:54, height:54, borderRadius:"50%", background:C.clay, border:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 20px rgba(194,101,60,0.32)", cursor:"pointer", zIndex:25 }}>
+            <Icon name="plus" size={24} color="#2A140A"/>
           </button>
 
           {!isDesktop && (
@@ -1397,7 +1407,7 @@ function EmptyState({ onAddDevice, onTryDemo }){
   return (
     <div style={{ padding:"60px 20px", textAlign:"center" }}>
       <div style={{ position:"relative", height:60, marginBottom:20, maxWidth:300, margin:"0 auto 20px" }}><ScopeTrace/></div>
-      <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, marginBottom:8 }}>No device yet</h2>
+      <h2 style={{ fontFamily:"'Fraunces',sans-serif", fontSize:20, marginBottom:8 }}>No device yet</h2>
       <p style={{ color:C.textMuted, fontSize:14, marginBottom:20, maxWidth:320, marginInline:"auto" }}>Add a phone with its rated battery capacity to start logging charge readings and tracking degradation over time.</p>
       <Button onClick={onAddDevice}><Icon name="plus" size={15}/> Add a device</Button>
       <div style={{ marginTop:14 }}>
