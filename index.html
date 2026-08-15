@@ -724,17 +724,19 @@ function SimpleBarChart({ data, height=160 }){
   const gap = 10;
   const barW = Math.max(18, width/data.length - gap);
   const max = 100;
+  const topPad = 18; // reserve room for the value label above the tallest bar
+  const chartH = height - topPad;
   return (
     <svg viewBox={`0 0 ${width} ${height+20}`} style={{ width:"100%", height:height+20 }}>
-      <line x1={0} x2={width} y1={height*0.2} y2={height*0.2} stroke={C.amberDim} strokeDasharray="4 4"/>
+      <line x1={0} x2={width} y1={topPad+chartH*0.2} y2={topPad+chartH*0.2} stroke={C.amberDim} strokeDasharray="4 4"/>
       {data.map((d,i)=>{
-        const h=(d.value/max)*height, x=i*(barW+gap)+gap/2, y=height-h;
+        const h=(d.value/max)*chartH, x=i*(barW+gap)+gap/2, y=topPad+chartH-h;
         const color = d.value>=90?C.teal:d.value>=75?C.amber:C.red;
         return (
           <g key={i}>
             <text x={x+barW/2} y={y-6} fontSize="10.5" fontWeight="700" fill={color} textAnchor="middle">{d.value}%</text>
             <rect x={x} y={y} width={barW} height={h} rx="5" fill={color}/>
-            <text x={x+barW/2} y={height+14} fontSize="9" fill={C.textFaint} textAnchor="middle">{d.label}</text>
+            <text x={x+barW/2} y={topPad+chartH+14} fontSize="9" fill={C.textFaint} textAnchor="middle">{d.label}</text>
           </g>
         );
       })}
