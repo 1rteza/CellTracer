@@ -718,6 +718,147 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
     </svg>
   );
 }
+
+const RANGE_OPTIONS = [
+  { key:"7", label:"7D", days:7 },
+  { key:"15", label:"15D", days:15 },
+  { key:"30", label:"30D", days:30 },
+  { key:"all", label:"All", days:null },
+];
+
+function filterByRange(items, rangeKey, dateField){
+  const opt = RANGE_OPTIONS.find(o=>o.key===rangeKey);
+  if (!opt || opt.days==null) return items;
+  const cutoff = Date.now() - opt.days*86400000;
+  return items.filter(it => new Date(it[dateField]).getTime() >= cutoff);
+}
+
+function RangeSelector({ value, onChange }){
+  return (
+    <div style={{ display:"flex", gap:6 }}>
+      {RANGE_OPTIONS.map(o=>(
+        <button key={o.key} onClick={()=>onChange(o.key)} style={{
+          padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer",
+          border:`1px solid ${value===o.key?C.blue:C.borderSoft}`,
+          background: value===o.key ? "rgba(69,140,217,0.15)" : "transparent",
+          color: value===o.key ? C.blue : C.textFaint,
+        }}>{o.label}</button>
+      ))}
+    </div>
+  );
+}
+
+// Groups raw charge readings into one min/max/last record per calendar day, so
+// long ranges show a daily trend instead of every dense charge/discharge blip.
+function aggregateDaily(entries){
+  const byDay = new Map();
+  entries.forEach(e=>{
+    const d = new Date(e.timestamp);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const ts = d.getTime();
+    if (!byDay.has(key)) byDay.set(key, { day:dayStart, min:e.percentage, max:e.percentage, last:e.percentage, lastTs:ts });
+    const rec = byDay.get(key);
+    rec.min = Math.min(rec.min, e.percentage);
+    rec.max = Math.max(rec.max, e.percentage);
+    if (ts >= rec.lastTs){ rec.last = e.percentage; rec.lastTs = ts; }
+  });
+  return Array.from(byDay.values()).sort((a,b)=>a.day-b.day);
+}
+
+function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
+  if (!data || data.length < 1) return null;
+  const width = 300;
+  const padLeft = 34, padBottom = 18;
+  const plotW = width - padLeft, plotH = height - padBottom;
+  const xs = data.map(d=>d.day);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const rangeX = (maxX-minX) || 1;
+  const [min,max] = domain;
+  const range = (max-min) || 1;
+  const px = (x) => padLeft + ((x-minX)/rangeX)*plotW;
+  const py = (y) => ((max-y)/range)*plotH;
+  const barW = Math.max(2, Math.min(10, plotW/data.length - 2));
+  const fmtVal = (v) => `${Math.round(v*10)/10}${unit}`;
+  const fmtDate = (x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const last = data[data.length-1];
+  return (
+    <svg viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
+      {[0,0.25,0.5,0.75,1].map((f,i)=>(
+        <g key={i}>
+          <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
+          <text x={padLeft-6} y={plotH*f+3} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtVal(max-(max-min)*f)}</text>
+        </g>
+      ))}
+      {data.map((d,i)=>(
+        <line key={i} x1={px(d.day)} x2={px(d.day)} y1={py(d.max)} y2={py(d.min)} stroke={color} strokeWidth={barW} strokeLinecap="round" opacity="0.75"/>
+      ))}
+      <text x={padLeft} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="start">{fmtDate(minX)}</text>
+      <text x={width} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtDate(maxX)}</text>
+      {last && <text x={Math.min(px(last.day), width-4)} y={Math.max(py(last.max)-9,9)} fontSize="10.5" fontWeight="700" fill={color} textAnchor="end">{fmtVal(last.max)}</text>}
+    </svg>
+  );
+}
+
+// Sessions shorter than this are too noisy to trust for a %/hr rate (small timing
+// errors dominate) — they're excluded from the rolling average and drawn as hollow dots.
+const UNRELIABLE_SESSION_HOURS = 2/60;
+
+function rollingAverage(vals, window){
+  const out = [];
+  for (let i=0;i<vals.length;i++){
+    const start = Math.max(0, i-window+1);
+    const slice = vals.slice(start, i+1);
+    out.push(slice.reduce((a,b)=>a+b,0)/slice.length);
+  }
+  return out;
+}
+
+function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
+  if (!sessions || sessions.length < 2) return null;
+  const width = 300;
+  const padLeft = 34, padBottom = 18;
+  const plotW = width - padLeft, plotH = height - padBottom;
+  const sorted = [...sessions].sort((a,b)=>new Date(a.end)-new Date(b.end));
+  const xs = sorted.map(s=>new Date(s.end).getTime());
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const rangeX = (maxX-minX) || 1;
+  const max = Math.max(...sorted.map(s=>s.rate)) || 1;
+  const min = 0;
+  const range = (max-min) || 1;
+  const px = (x) => padLeft + ((x-minX)/rangeX)*plotW;
+  const py = (y) => ((max-Math.min(y,max))/range)*plotH;
+  const reliable = sorted.filter(s=>s.durationHours>=UNRELIABLE_SESSION_HOURS);
+  const avgVals = rollingAverage(reliable.map(s=>s.rate), 7);
+  const avgLine = reliable.map((s,i)=>`${px(new Date(s.end).getTime())},${py(avgVals[i])}`).join(" ");
+  const fmtVal = (v) => `${Math.round(v*10)/10}${unit}`;
+  const fmtDate = (x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const lastAvg = avgVals[avgVals.length-1];
+  const lastAvgPt = reliable.length ? [px(new Date(reliable[reliable.length-1].end).getTime()), py(lastAvg)] : null;
+  return (
+    <svg viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
+      {[0,0.25,0.5,0.75,1].map((f,i)=>(
+        <g key={i}>
+          <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
+          <text x={padLeft-6} y={plotH*f+3} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtVal(max-(max-min)*f)}</text>
+        </g>
+      ))}
+      {sorted.map((s,i)=>{
+        const cx = px(new Date(s.end).getTime());
+        const cy = py(s.rate);
+        const isReliable = s.durationHours>=UNRELIABLE_SESSION_HOURS;
+        return isReliable
+          ? <circle key={i} cx={cx} cy={cy} r="2" fill={color} opacity="0.35"/>
+          : <circle key={i} cx={cx} cy={cy} r="2" fill="none" stroke={C.textFaint} strokeWidth="1" opacity="0.6"/>;
+      })}
+      {reliable.length>1 && <polyline points={avgLine} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke"/>}
+      {lastAvgPt && <circle cx={lastAvgPt[0]} cy={lastAvgPt[1]} r="4" fill={color} stroke={C.panel} strokeWidth="1.5"/>}
+      {lastAvgPt && <text x={Math.min(lastAvgPt[0], width-4)} y={Math.max(lastAvgPt[1]-9,9)} fontSize="10.5" fontWeight="700" fill={color} textAnchor="end">{fmtVal(lastAvg)}</text>}
+      <text x={padLeft} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="start">{fmtDate(minX)}</text>
+      <text x={width} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtDate(maxX)}</text>
+    </svg>
+  );
+}
 function SimpleBarChart({ data, height=160 }){
   if (!data.length) return null;
   const width = 300;
@@ -1422,8 +1563,12 @@ function EmptyState({ onAddDevice, onTryDemo }){
 const PERIODS = [ { key:"today", label:"Today", days:1 }, { key:"yesterday", label:"Yesterday", days:1 }, { key:"week", label:"Last 7 days", days:7 }, { key:"month", label:"Last 30 days", days:30 }, { key:"all", label:"All time", days:Infinity } ];
 
 function Dashboard({ device, entries, health }){
-  const chartData = entries.map(e => ({ x: new Date(e.timestamp).getTime(), y: e.percentage }));
-  const sessionChart = (health.sessions||[]).map(s => ({ x: new Date(s.end).getTime(), y: Math.round((s.activeRate ?? s.rate)*100)/100 }));
+  const [rangeKey, setRangeKey] = useState("30");
+  const useDaily = rangeKey==="30" || rangeKey==="all";
+  const filteredEntries = filterByRange(entries, rangeKey, "timestamp");
+  const filteredSessions = filterByRange(health.sessions||[], rangeKey, "end");
+  const chartData = filteredEntries.map(e => ({ x: new Date(e.timestamp).getTime(), y: e.percentage }));
+  const dailyChartData = useDaily ? aggregateDaily(filteredEntries) : null;
   const firstEntry = entries[0];
   const showLoggingGapCaveat = device.purchaseDate && firstEntry && (new Date(firstEntry.timestamp) - new Date(device.purchaseDate)) > 14*86400000;
 
@@ -1470,13 +1615,22 @@ function Dashboard({ device, entries, health }){
       <PeriodPanel entries={entries} sessions={health.sessions}/>
 
       <Panel style={{ padding:"16px 16px 8px" }}>
-        <SectionTitle icon="battery">Charge level over time</SectionTitle>
-        {chartData.length>1 ? <SimpleLineChart data={chartData} color={C.blue} domain={[0,100]} unit="%"/> : <EmptyChart text="Log at least two readings to see a chart."/>}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:4 }}>
+          <SectionTitle icon="battery">Charge level over time</SectionTitle>
+          <RangeSelector value={rangeKey} onChange={setRangeKey}/>
+        </div>
+        {useDaily
+          ? (dailyChartData && dailyChartData.length>0 ? <DailyRangeChart data={dailyChartData} color={C.blue} domain={[0,100]} unit="%"/> : <EmptyChart text="Log at least one reading to see a chart."/>)
+          : (chartData.length>1 ? <SimpleLineChart data={chartData} color={C.blue} domain={[0,100]} unit="%"/> : <EmptyChart text="Log at least two readings to see a chart."/>)}
+        {useDaily && <p style={{ fontSize:11, color:C.textFaint, margin:"6px 0 12px" }}>Each bar spans that day's lowest to highest charge reading.</p>}
       </Panel>
 
       <Panel style={{ padding:"16px 16px 8px" }}>
-        <SectionTitle icon="activity">Drain rate trend (per session)</SectionTitle>
-        {sessionChart.length>1 ? (<><SimpleLineChart data={sessionChart} color={C.amber} height={160} unit="%/hr"/><p style={{ fontSize:11.5, color:C.textFaint, margin:"8px 0 12px" }}>A rising trend means the same charge drains faster over time — a sign of capacity fade.</p></>) : <EmptyChart text="Sessions build up as you log unplugged readings between charges."/>}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:4 }}>
+          <SectionTitle icon="activity">Drain rate trend (per session)</SectionTitle>
+          <RangeSelector value={rangeKey} onChange={setRangeKey}/>
+        </div>
+        {filteredSessions.length>1 ? (<><SessionTrendChart sessions={filteredSessions} color={C.amber} height={160} unit="%/hr"/><p style={{ fontSize:11.5, color:C.textFaint, margin:"8px 0 12px" }}>Bold line is the rolling average — the real trend to watch. Faded dots are raw sessions; hollow dots are very short sessions (under 2 min) excluded from the average as unreliable.</p></>) : <EmptyChart text="Sessions build up as you log unplugged readings between charges."/>}
       </Panel>
     </div>
   );
