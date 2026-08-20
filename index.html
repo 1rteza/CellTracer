@@ -1614,11 +1614,13 @@ function Dashboard({ device, entries, health }){
 
       <PeriodPanel entries={entries} sessions={health.sessions}/>
 
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"0 2px" }}>
+        <span style={{ fontSize:11.5, fontWeight:600, color:C.textFaint, textTransform:"uppercase", letterSpacing:0.4 }}>Charts range</span>
+        <RangeSelector value={rangeKey} onChange={setRangeKey}/>
+      </div>
+
       <Panel style={{ padding:"16px 16px 8px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:4 }}>
-          <SectionTitle icon="battery">Charge level over time</SectionTitle>
-          <RangeSelector value={rangeKey} onChange={setRangeKey}/>
-        </div>
+        <SectionTitle icon="battery">Charge level over time</SectionTitle>
         {useDaily
           ? (dailyChartData && dailyChartData.length>0 ? <DailyRangeChart data={dailyChartData} color={C.blue} domain={[0,100]} unit="%"/> : <EmptyChart text="Log at least one reading to see a chart."/>)
           : (chartData.length>1 ? <SimpleLineChart data={chartData} color={C.blue} domain={[0,100]} unit="%"/> : <EmptyChart text="Log at least two readings to see a chart."/>)}
@@ -1626,10 +1628,7 @@ function Dashboard({ device, entries, health }){
       </Panel>
 
       <Panel style={{ padding:"16px 16px 8px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:4 }}>
-          <SectionTitle icon="activity">Drain rate trend (per session)</SectionTitle>
-          <RangeSelector value={rangeKey} onChange={setRangeKey}/>
-        </div>
+        <SectionTitle icon="activity">Drain rate trend (per session)</SectionTitle>
         {filteredSessions.length>1 ? (<><SessionTrendChart sessions={filteredSessions} color={C.amber} height={160} unit="%/hr"/><p style={{ fontSize:11.5, color:C.textFaint, margin:"8px 0 12px" }}>Bold line is the rolling average — the real trend to watch. Faded dots are raw sessions; hollow dots are very short sessions (under 2 min) excluded from the average as unreliable.</p></>) : <EmptyChart text="Sessions build up as you log unplugged readings between charges."/>}
       </Panel>
     </div>
