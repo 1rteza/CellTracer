@@ -681,6 +681,24 @@ function BatteryIcon({ percentage, charging, size=18 }){
 }
 
 // ---- hand-rolled charts (no external chart library) ----------------------
+
+// Small floating label used by all charts' hover/tap interaction. Clamped
+// horizontally so it never runs off either edge of the chart.
+function ChartTooltip({ x, y, value, sub, color, chartWidth }){
+  const boxW = 80, boxH = sub ? 34 : 20;
+  let bx = x - boxW/2;
+  bx = Math.max(2, Math.min(chartWidth-boxW-2, bx));
+  let by = y - boxH - 10;
+  if (by < 2) by = 2;
+  return (
+    <g pointerEvents="none">
+      <rect x={bx} y={by} width={boxW} height={boxH} rx="6" fill={C.panel} stroke={C.borderSoft} strokeWidth="1"/>
+      <text x={bx+boxW/2} y={by+14} fontSize="11" fontWeight="700" fill={color} textAnchor="middle">{value}</text>
+      {sub && <text x={bx+boxW/2} y={by+28} fontSize="9" fill={C.textFaint} textAnchor="middle">{sub}</text>}
+    </g>
+  );
+}
+
 function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat }){
   if (!data || data.length < 2) return null;
   const width = 300;
@@ -701,8 +719,24 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
   const lastPt = pts[pts.length-1];
   const fmtVal = (v) => `${Math.round(v*10)/10}${unit}`;
   const fmtDate = dateFormat || ((x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"}));
+
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  function handlePointer(clientX){
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const localX = (clientX - rect.left) * (width/rect.width);
+    let nearest = 0, nearestDist = Infinity;
+    pts.forEach((p,i)=>{ const d = Math.abs(p[0]-localX); if (d<nearestDist){ nearestDist=d; nearest=i; } });
+    setHoverIdx(nearest);
+  }
+  const hp = hoverIdx!=null ? pts[hoverIdx] : null;
+  const hd = hoverIdx!=null ? data[hoverIdx] : null;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
@@ -715,6 +749,15 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
       <text x={Math.min(lastPt[0], width-4)} y={Math.max(lastPt[1]-9, 9)} fontSize="10.5" fontWeight="700" fill={color} textAnchor="end">{fmtVal(last.y)}</text>
       <text x={padLeft} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="start">{fmtDate(minX)}</text>
       <text x={width} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtDate(maxX)}</text>
+      {hp && <line x1={hp[0]} x2={hp[0]} y1={0} y2={plotH} stroke={C.textFaint} strokeWidth="1" strokeDasharray="3 3" pointerEvents="none"/>}
+      {hp && <circle cx={hp[0]} cy={hp[1]} r="5" fill={color} stroke={C.panel} strokeWidth="2" pointerEvents="none"/>}
+      {hp && <ChartTooltip x={hp[0]} y={hp[1]} value={fmtVal(hd.y)} sub={fmtDate(hd.x)} color={color} chartWidth={width}/>}
+      <rect x={0} y={0} width={width} height={plotH} fill="transparent"
+        onPointerDown={(e)=>handlePointer(e.clientX)}
+        onPointerMove={(e)=>handlePointer(e.clientX)}
+        onPointerUp={()=>setHoverIdx(null)}
+        onPointerLeave={()=>setHoverIdx(null)}
+        style={{ touchAction:"none", cursor:"crosshair" }}/>
     </svg>
   );
 }
@@ -782,8 +825,24 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
   const fmtVal = (v) => `${Math.round(v*10)/10}${unit}`;
   const fmtDate = (x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const last = data[data.length-1];
+
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  function handlePointer(clientX){
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const localX = (clientX - rect.left) * (width/rect.width);
+    let nearest = 0, nearestDist = Infinity;
+    data.forEach((d,i)=>{ const dist = Math.abs(px(d.day)-localX); if (dist<nearestDist){ nearestDist=dist; nearest=i; } });
+    setHoverIdx(nearest);
+  }
+  const hd = hoverIdx!=null ? data[hoverIdx] : null;
+  const hx = hd ? px(hd.day) : null;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
@@ -791,11 +850,19 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
         </g>
       ))}
       {data.map((d,i)=>(
-        <line key={i} x1={px(d.day)} x2={px(d.day)} y1={py(d.max)} y2={py(d.min)} stroke={color} strokeWidth={barW} strokeLinecap="round" opacity="0.75"/>
+        <line key={i} x1={px(d.day)} x2={px(d.day)} y1={py(d.max)} y2={py(d.min)} stroke={color} strokeWidth={barW} strokeLinecap="round" opacity={hoverIdx===i?1:0.75}/>
       ))}
       <text x={padLeft} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="start">{fmtDate(minX)}</text>
       <text x={width} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtDate(maxX)}</text>
       {last && <text x={Math.min(px(last.day), width-4)} y={Math.max(py(last.max)-9,9)} fontSize="10.5" fontWeight="700" fill={color} textAnchor="end">{fmtVal(last.max)}</text>}
+      {hd && <line x1={hx} x2={hx} y1={0} y2={plotH} stroke={C.textFaint} strokeWidth="1" strokeDasharray="3 3" pointerEvents="none"/>}
+      {hd && <ChartTooltip x={hx} y={py(hd.max)} value={hd.min===hd.max?fmtVal(hd.max):`${fmtVal(hd.min)}–${fmtVal(hd.max)}`} sub={fmtDate(hd.day)} color={color} chartWidth={width}/>}
+      <rect x={0} y={0} width={width} height={plotH} fill="transparent"
+        onPointerDown={(e)=>handlePointer(e.clientX)}
+        onPointerMove={(e)=>handlePointer(e.clientX)}
+        onPointerUp={()=>setHoverIdx(null)}
+        onPointerLeave={()=>setHoverIdx(null)}
+        style={{ touchAction:"none", cursor:"crosshair" }}/>
     </svg>
   );
 }
@@ -835,8 +902,25 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
   const fmtDate = (x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const lastAvg = avgVals[avgVals.length-1];
   const lastAvgPt = reliable.length ? [px(new Date(reliable[reliable.length-1].end).getTime()), py(lastAvg)] : null;
+
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  function handlePointer(clientX){
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const localX = (clientX - rect.left) * (width/rect.width);
+    let nearest = 0, nearestDist = Infinity;
+    sorted.forEach((s,i)=>{ const dist = Math.abs(px(new Date(s.end).getTime())-localX); if (dist<nearestDist){ nearestDist=dist; nearest=i; } });
+    setHoverIdx(nearest);
+  }
+  const hs = hoverIdx!=null ? sorted[hoverIdx] : null;
+  const hx = hs ? px(new Date(hs.end).getTime()) : null;
+  const hy = hs ? py(hs.rate) : null;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} style={{ width:"100%", height:height+4, overflow:"visible" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
@@ -848,14 +932,22 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
         const cy = py(s.rate);
         const isReliable = s.durationHours>=UNRELIABLE_SESSION_HOURS;
         return isReliable
-          ? <circle key={i} cx={cx} cy={cy} r="2" fill={color} opacity="0.35"/>
-          : <circle key={i} cx={cx} cy={cy} r="2" fill="none" stroke={C.textFaint} strokeWidth="1" opacity="0.6"/>;
+          ? <circle key={i} cx={cx} cy={cy} r={hoverIdx===i?3.5:2} fill={color} opacity={hoverIdx===i?0.9:0.35}/>
+          : <circle key={i} cx={cx} cy={cy} r={hoverIdx===i?3.5:2} fill="none" stroke={C.textFaint} strokeWidth="1" opacity={hoverIdx===i?0.9:0.6}/>;
       })}
       {reliable.length>1 && <polyline points={avgLine} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke"/>}
       {lastAvgPt && <circle cx={lastAvgPt[0]} cy={lastAvgPt[1]} r="4" fill={color} stroke={C.panel} strokeWidth="1.5"/>}
       {lastAvgPt && <text x={Math.min(lastAvgPt[0], width-4)} y={Math.max(lastAvgPt[1]-9,9)} fontSize="10.5" fontWeight="700" fill={color} textAnchor="end">{fmtVal(lastAvg)}</text>}
       <text x={padLeft} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="start">{fmtDate(minX)}</text>
       <text x={width} y={height+2} fontSize="8.5" fill={C.textFaint} textAnchor="end">{fmtDate(maxX)}</text>
+      {hs && <line x1={hx} x2={hx} y1={0} y2={plotH} stroke={C.textFaint} strokeWidth="1" strokeDasharray="3 3" pointerEvents="none"/>}
+      {hs && <ChartTooltip x={hx} y={hy} value={fmtVal(hs.rate)} sub={`${fmtDate(new Date(hs.end).getTime())}${hs.durationHours<UNRELIABLE_SESSION_HOURS?" · unreliable":""}`} color={color} chartWidth={width}/>}
+      <rect x={0} y={0} width={width} height={plotH} fill="transparent"
+        onPointerDown={(e)=>handlePointer(e.clientX)}
+        onPointerMove={(e)=>handlePointer(e.clientX)}
+        onPointerUp={()=>setHoverIdx(null)}
+        onPointerLeave={()=>setHoverIdx(null)}
+        style={{ touchAction:"none", cursor:"crosshair" }}/>
     </svg>
   );
 }
