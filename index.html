@@ -736,7 +736,7 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
   const hd = hoverIdx!=null ? data[hoverIdx] : null;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} preserveAspectRatio="none" onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
@@ -842,7 +842,7 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
   const hx = hd ? px(hd.day) : null;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} preserveAspectRatio="none" onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
@@ -920,7 +920,7 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
   const hy = hs ? py(hs.rate) : null;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
+    <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} preserveAspectRatio="none" onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
           <line x1={padLeft} x2={width} y1={plotH*f} y2={plotH*f} stroke={C.borderSoft} strokeDasharray="3 3"/>
