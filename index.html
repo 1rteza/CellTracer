@@ -682,6 +682,27 @@ function BatteryIcon({ percentage, charging, size=18 }){
 
 // ---- hand-rolled charts (no external chart library) ----------------------
 
+// Charts render at their real container width instead of a fixed size, so
+// they fill the available space on wide desktop screens instead of staying
+// pinned to a small fixed size with empty margin on either side.
+function useMeasuredWidth(fallback=300){
+  const containerRef = useRef(null);
+  const [width, setWidth] = useState(fallback);
+  useEffect(()=>{
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver==="undefined") return;
+    const ro = new ResizeObserver((entries)=>{
+      for (const entry of entries){
+        const w = entry.contentRect.width;
+        if (w>0) setWidth(Math.round(w));
+      }
+    });
+    ro.observe(el);
+    return ()=>ro.disconnect();
+  }, []);
+  return [containerRef, width];
+}
+
 // Small floating label used by all charts' hover/tap interaction. Clamped
 // horizontally so it never runs off either edge of the chart.
 function ChartTooltip({ x, y, value, sub, color, chartWidth }){
@@ -700,8 +721,10 @@ function ChartTooltip({ x, y, value, sub, color, chartWidth }){
 }
 
 function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat }){
+  const [containerRef, width] = useMeasuredWidth(300);
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
   if (!data || data.length < 2) return null;
-  const width = 300;
   const padLeft = 34, padBottom = 18;
   const plotW = width - padLeft, plotH = height - padBottom;
   const xs = data.map(d=>d.x);
@@ -720,8 +743,6 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
   const fmtVal = (v) => `${Math.round(v*10)/10}${unit}`;
   const fmtDate = dateFormat || ((x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"}));
 
-  const svgRef = useRef(null);
-  const [hoverIdx, setHoverIdx] = useState(null);
   function handlePointer(clientX, clientY){
     const svg = svgRef.current;
     if (!svg) return;
@@ -739,6 +760,7 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
   const hd = hoverIdx!=null ? data[hoverIdx] : null;
 
   return (
+    <div ref={containerRef} style={{ width:"100%" }}>
     <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
@@ -762,6 +784,7 @@ function SimpleLineChart({ data, height=180, color, domain, unit="", dateFormat 
         onPointerLeave={()=>setHoverIdx(null)}
         style={{ touchAction:"none", cursor:"crosshair", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}/>
     </svg>
+    </div>
   );
 }
 
@@ -813,8 +836,10 @@ function aggregateDaily(entries){
 }
 
 function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
+  const [containerRef, width] = useMeasuredWidth(300);
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
   if (!data || data.length < 1) return null;
-  const width = 300;
   const padLeft = 34, padBottom = 18;
   const plotW = width - padLeft, plotH = height - padBottom;
   const xs = data.map(d=>d.day);
@@ -829,8 +854,6 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
   const fmtDate = (x) => new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const last = data[data.length-1];
 
-  const svgRef = useRef(null);
-  const [hoverIdx, setHoverIdx] = useState(null);
   function handlePointer(clientX, clientY){
     const svg = svgRef.current;
     if (!svg) return;
@@ -848,6 +871,7 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
   const hx = hd ? px(hd.day) : null;
 
   return (
+    <div ref={containerRef} style={{ width:"100%" }}>
     <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
@@ -870,6 +894,7 @@ function DailyRangeChart({ data, height=180, color, domain=[0,100], unit="%" }){
         onPointerLeave={()=>setHoverIdx(null)}
         style={{ touchAction:"none", cursor:"crosshair", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}/>
     </svg>
+    </div>
   );
 }
 
@@ -888,8 +913,10 @@ function rollingAverage(vals, window){
 }
 
 function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
+  const [containerRef, width] = useMeasuredWidth(300);
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
   if (!sessions || sessions.length < 2) return null;
-  const width = 300;
   const padLeft = 34, padBottom = 18;
   const plotW = width - padLeft, plotH = height - padBottom;
   const sorted = [...sessions].sort((a,b)=>new Date(a.end)-new Date(b.end));
@@ -909,8 +936,6 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
   const lastAvg = avgVals[avgVals.length-1];
   const lastAvgPt = reliable.length ? [px(new Date(reliable[reliable.length-1].end).getTime()), py(lastAvg)] : null;
 
-  const svgRef = useRef(null);
-  const [hoverIdx, setHoverIdx] = useState(null);
   function handlePointer(clientX, clientY){
     const svg = svgRef.current;
     if (!svg) return;
@@ -929,6 +954,7 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
   const hy = hs ? py(hs.rate) : null;
 
   return (
+    <div ref={containerRef} style={{ width:"100%" }}>
     <svg ref={svgRef} viewBox={`0 0 ${width} ${height+4}`} onContextMenu={(e)=>e.preventDefault()} style={{ width:"100%", height:height+4, overflow:"visible", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}>
       {[0,0.25,0.5,0.75,1].map((f,i)=>(
         <g key={i}>
@@ -958,31 +984,34 @@ function SessionTrendChart({ sessions, height=160, color, unit="%/hr" }){
         onPointerLeave={()=>setHoverIdx(null)}
         style={{ touchAction:"none", cursor:"crosshair", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}/>
     </svg>
+    </div>
   );
 }
 function SimpleBarChart({ data, height=160 }){
+  const [containerRef, width] = useMeasuredWidth(300);
   if (!data.length) return null;
-  const width = 300;
   const gap = 10;
-  const barW = Math.max(18, width/data.length - gap);
+  const barW = Math.max(18, Math.min(64, width/data.length - gap));
   const max = 100;
   const topPad = 18; // reserve room for the value label above the tallest bar
   const chartH = height - topPad;
   return (
-    <svg viewBox={`0 0 ${width} ${height+20}`} style={{ width:"100%", height:height+20 }}>
-      <line x1={0} x2={width} y1={topPad+chartH*0.2} y2={topPad+chartH*0.2} stroke={C.amberDim} strokeDasharray="4 4"/>
-      {data.map((d,i)=>{
-        const h=(d.value/max)*chartH, x=i*(barW+gap)+gap/2, y=topPad+chartH-h;
-        const color = d.value>=90?C.teal:d.value>=75?C.amber:C.red;
-        return (
-          <g key={i}>
-            <text x={x+barW/2} y={y-6} fontSize="10.5" fontWeight="700" fill={color} textAnchor="middle">{d.value}%</text>
-            <rect x={x} y={y} width={barW} height={h} rx="5" fill={color}/>
-            <text x={x+barW/2} y={topPad+chartH+14} fontSize="9" fill={C.textFaint} textAnchor="middle">{d.label}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div ref={containerRef} style={{ width:"100%" }}>
+      <svg viewBox={`0 0 ${width} ${height+20}`} style={{ width:"100%", height:height+20 }}>
+        <line x1={0} x2={width} y1={topPad+chartH*0.2} y2={topPad+chartH*0.2} stroke={C.amberDim} strokeDasharray="4 4"/>
+        {data.map((d,i)=>{
+          const h=(d.value/max)*chartH, x=i*(barW+gap)+gap/2, y=topPad+chartH-h;
+          const color = d.value>=90?C.teal:d.value>=75?C.amber:C.red;
+          return (
+            <g key={i}>
+              <text x={x+barW/2} y={y-6} fontSize="10.5" fontWeight="700" fill={color} textAnchor="middle">{d.value}%</text>
+              <rect x={x} y={y} width={barW} height={h} rx="5" fill={color}/>
+              <text x={x+barW/2} y={topPad+chartH+14} fontSize="9" fill={C.textFaint} textAnchor="middle">{d.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
