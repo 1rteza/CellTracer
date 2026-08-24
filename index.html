@@ -466,6 +466,18 @@ function useIsDesktop(){
 }
 const fmtDate = (iso) => { if(!iso) return "—"; const d=new Date(iso); if(isNaN(d.getTime())) return "—"; return d.toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}); };
 const fmtShort = (iso) => { if(!iso) return "—"; const d=new Date(iso); if(isNaN(d.getTime())) return "—"; return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+// Screen-on-time is stored internally as decimal hours (e.g. 0.5) for easy math,
+// but shown to the user as "1h 30m" — matching how it's entered — instead of a
+// bare decimal that's hard to picture (what does "0.5h" mean at a glance?).
+const fmtHoursMinutes = (hoursDecimal) => {
+  if (hoursDecimal==null || isNaN(hoursDecimal)) return "—";
+  const totalMinutes = Math.round(hoursDecimal*60);
+  const h = Math.floor(totalMinutes/60);
+  const m = totalMinutes%60;
+  if (h===0) return `${m}m`;
+  if (m===0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
 const dayLabel = (iso) => {
   const d = new Date(iso); d.setHours(0,0,0,0);
   const now = new Date(); now.setHours(0,0,0,0);
@@ -1909,7 +1921,7 @@ function LogTab({ entries, sessions, onDelete, onEdit }){
                   <div style={{ display:"flex", gap:10, marginTop:3, flexWrap:"wrap" }}>
                     {e.charging && <Tag text="charging"/>}
                     {style && style.label && <Tag text={style.label} color={style.color}/>}
-                    {e.screenOnTime!=null && <Tag icon="clock" text={`${e.screenOnTime}h SOT`}/>}
+                    {e.screenOnTime!=null && <Tag icon="clock" text={`${fmtHoursMinutes(e.screenOnTime)} SOT`}/>}
                     {e.temperature!=null && <Tag icon="thermometer" text={`${e.temperature}°C`}/>}
                     {e.reportedHealth!=null && <Tag text={`OS health ${e.reportedHealth}%`}/>}
                     {e.note && <Tag text={e.note}/>}
