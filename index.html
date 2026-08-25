@@ -1716,15 +1716,26 @@ function Dashboard({ device, entries, health }){
   const firstEntry = entries[0];
   const showLoggingGapCaveat = device.purchaseDate && firstEntry && (new Date(firstEntry.timestamp) - new Date(device.purchaseDate)) > 14*86400000;
 
+  // Drain-rate snapshot: reuse the same reliability filter as the trend chart
+  // (excludes very short sessions, which are too noisy to trust for a %/hr figure).
+  const reliableSessions = (health.sessions||[]).filter(s=>s.valid && s.durationHours>=UNRELIABLE_SESSION_HOURS);
+  const sortedReliable = [...reliableSessions].sort((a,b)=>new Date(a.end)-new Date(b.end));
+  const latestSession = sortedReliable[sortedReliable.length-1] || null;
+  const sevenDaysAgo = Date.now() - 7*86400000;
+  const last7DaySessions = reliableSessions.filter(s=>new Date(s.end).getTime()>=sevenDaysAgo);
+  const avg7DayRate = last7DaySessions.length ? median(last7DaySessions.map(s=>s.rate)) : null;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
       <Panel style={{ padding:20, position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:0, left:0, right:0, height:60 }}><ScopeTrace/></div>
         <div style={{ display:"flex", alignItems:"center", gap:20, flexWrap:"wrap", position:"relative" }}>
           <Gauge value={health.healthScore}/>
-          <div style={{ display:"flex", flexDirection:"column", gap:14, flex:1, minWidth:160 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px 16px", flex:1, minWidth:200, position:"relative" }}>
             <StatBlock label="ESTIMATED CAPACITY" value={health.estimatedCapacity ?? "—"} unit={health.estimatedCapacity?"mAh":""} sub={`rated ${device.ratedCapacity ?? "—"} mAh`} color={healthColor(health.healthScore)}/>
             <StatBlock label="ESTIMATED CYCLES" value={Math.round(health.cycleCount*10)/10} sub={`since ${fmtShort(device.purchaseDate)}`}/>
+            <StatBlock label="DRAIN RATE NOW" value={latestSession?Math.round(latestSession.rate*10)/10:"—"} unit={latestSession?"%/hr":""} sub={latestSession?`as of ${fmtShort(latestSession.end)}`:"no data yet"} color={C.amber}/>
+            <StatBlock label="7-DAY AVG DRAIN" value={avg7DayRate!=null?Math.round(avg7DayRate*10)/10:"—"} unit={avg7DayRate!=null?"%/hr":""} sub={last7DaySessions.length?`${last7DaySessions.length} session${last7DaySessions.length===1?"":"s"}`:"no data yet"}/>
           </div>
         </div>
         {health.insufficientData && <p style={{ marginTop:14, fontSize:12.5, color:C.textMuted, position:"relative" }}>Log a few more discharge readings (unplugged, percentage dropping) to unlock a health estimate — at least 4 back-to-back readings needed.</p>}
