@@ -1997,6 +1997,14 @@ function DeviceForm({ onClose, onSave }){
   );
 }
 
+const SOT_PRESETS_MIN = [0, 15, 30, 45, 60, 90, 120, 180];
+function fmtPresetLabel(mins){
+  if (mins===0) return "0m";
+  if (mins<60) return `${mins}m`;
+  const h = Math.floor(mins/60), m = mins%60;
+  return m===0 ? `${h}h` : `${h}h${m}m`;
+}
+
 function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
   const isEdit = !!existingEntry;
   const [timestamp, setTimestamp] = useState(existingEntry ? toLocalInput(existingEntry.timestamp) : nowLocal());
@@ -2008,6 +2016,7 @@ function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
   const [reportedHealth, setReportedHealth] = useState(existingEntry && existingEntry.reportedHealth!=null ? String(existingEntry.reportedHealth) : "");
   const [note, setNote] = useState(existingEntry && existingEntry.note ? existingEntry.note : "");
   const [sessionType, setSessionType] = useState(existingEntry && existingEntry.sessionType ? existingEntry.sessionType : null);
+  const sotTotalMin = (Number(screenOnHours)||0)*60 + (Number(screenOnMinutes)||0);
   const submit = () => {
     const pct = Number(percentage);
     if (isNaN(pct)||pct<0||pct>100) return;
@@ -2027,10 +2036,37 @@ function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
   return (
     <Modal title={isEdit?"Edit reading":"Log a reading"} onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        <Field label="Time"><input style={inputStyle} type="datetime-local" value={timestamp} onChange={e=>setTimestamp(e.target.value)}/></Field>
-        <Field label="Battery percentage"><input style={inputStyle} type="number" min="0" max="100" value={percentage} onChange={e=>setPercentage(e.target.value)}/></Field>
+        <Field label="Time">
+          <div style={{ display:"flex", gap:8 }}>
+            <input style={{ ...inputStyle, flex:1 }} type="datetime-local" value={timestamp} onChange={e=>setTimestamp(e.target.value)}/>
+            <Button variant="ghost" onClick={()=>setTimestamp(nowLocal())} style={{ padding:"8px 14px", whiteSpace:"nowrap" }}>Now</Button>
+          </div>
+        </Field>
+        <Field label="Battery percentage">
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <input type="range" min="0" max="100" step="1" value={percentage===""?0:percentage}
+              onChange={e=>setPercentage(e.target.value)}
+              style={{ flex:1, accentColor:C.teal }}/>
+            <input style={{ ...inputStyle, width:64, textAlign:"center", fontWeight:700 }} type="number" min="0" max="100"
+              value={percentage} onChange={e=>setPercentage(e.target.value)}/>
+            <span style={{ fontSize:13, color:C.textMuted }}>%</span>
+          </div>
+        </Field>
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13.5, color:C.text }}><input type="checkbox" checked={charging} onChange={e=>setCharging(e.target.checked)}/> Plugged in / charging right now</label>
         <Field label="Screen-on time since last log (optional)">
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+            {SOT_PRESETS_MIN.map(mins=>{
+              const active = sotTotalMin===mins;
+              return (
+                <button key={mins} type="button" onClick={()=>{ setScreenOnHours(String(Math.floor(mins/60))); setScreenOnMinutes(String(mins%60)); }}
+                  style={{ padding:"6px 10px", borderRadius:8, fontSize:11.5, cursor:"pointer",
+                    background: active?C.tealDim:C.panel2, color: active?C.teal:C.textMuted,
+                    border:`1px solid ${active?C.teal:C.border}` }}>
+                  {fmtPresetLabel(mins)}
+                </button>
+              );
+            })}
+          </div>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             <input style={{ ...inputStyle, width:70 }} type="number" min="0" value={screenOnHours} onChange={e=>setScreenOnHours(e.target.value)} placeholder="0"/>
             <span style={{ fontSize:12.5, color:C.textMuted }}>hr</span>
