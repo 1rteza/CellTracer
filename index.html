@@ -2016,6 +2016,10 @@ function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
   const [reportedHealth, setReportedHealth] = useState(existingEntry && existingEntry.reportedHealth!=null ? String(existingEntry.reportedHealth) : "");
   const [note, setNote] = useState(existingEntry && existingEntry.note ? existingEntry.note : "");
   const [sessionType, setSessionType] = useState(existingEntry && existingEntry.sessionType ? existingEntry.sessionType : null);
+  // Auto-expand "more details" when editing an entry that already has any of these set,
+  // so nothing gets silently hidden/lost — otherwise it starts collapsed to reduce clutter.
+  const hasExtraDetails = !!(existingEntry && (existingEntry.sessionType || existingEntry.temperature!=null || existingEntry.reportedHealth!=null || existingEntry.note));
+  const [showMore, setShowMore] = useState(hasExtraDetails);
   const sotTotalMin = (Number(screenOnHours)||0)*60 + (Number(screenOnMinutes)||0);
   const submit = () => {
     const pct = Number(percentage);
@@ -2074,21 +2078,33 @@ function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
             <span style={{ fontSize:12.5, color:C.textMuted }}>min</span>
           </div>
         </Field>
-        <Field label="How was this session mostly used? (optional, but helps accuracy)">
-          <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-            {typeOptions.map(opt=>(
-              <button key={String(opt.key)} onClick={()=>setSessionType(opt.key)} type="button"
-                style={{ flex:"1 1 auto", padding:"7px 9px", borderRadius:8, fontSize:11.5, cursor:"pointer",
-                  background: sessionType===opt.key?C.tealDim:C.panel2, color: sessionType===opt.key?C.teal:C.textMuted,
-                  border:`1px solid ${sessionType===opt.key?C.teal:C.border}` }}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </Field>
-        <Field label="Temperature °C (optional)"><input style={inputStyle} type="number" value={temperature} onChange={e=>setTemperature(e.target.value)} placeholder="e.g. 32"/></Field>
-        <Field label="OS-reported battery health % (optional)"><input style={inputStyle} type="number" value={reportedHealth} onChange={e=>setReportedHealth(e.target.value)} placeholder="e.g. 97"/></Field>
-        <Field label="Note (optional)"><input style={inputStyle} value={note} onChange={e=>setNote(e.target.value)} placeholder="Heavy gaming session, AC on, etc."/></Field>
+
+        <button type="button" onClick={()=>setShowMore(v=>!v)}
+          style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", padding:"2px 0", cursor:"pointer", color:C.textMuted, fontSize:12.5, fontWeight:600 }}>
+          <Icon name="chevronDown" size={13} style={{ transform: showMore?"rotate(180deg)":"none", transition:"transform .15s" }}/>
+          {showMore ? "Hide extra details" : "Add more details (session type, temperature, health, note)"}
+        </button>
+
+        {showMore && (
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <Field label="How was this session mostly used? (optional, but helps accuracy)">
+            <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+              {typeOptions.map(opt=>(
+                <button key={String(opt.key)} onClick={()=>setSessionType(opt.key)} type="button"
+                  style={{ flex:"1 1 auto", padding:"7px 9px", borderRadius:8, fontSize:11.5, cursor:"pointer",
+                    background: sessionType===opt.key?C.tealDim:C.panel2, color: sessionType===opt.key?C.teal:C.textMuted,
+                    border:`1px solid ${sessionType===opt.key?C.teal:C.border}` }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Temperature °C (optional)"><input style={inputStyle} type="number" value={temperature} onChange={e=>setTemperature(e.target.value)} placeholder="e.g. 32"/></Field>
+          <Field label="OS-reported battery health % (optional)"><input style={inputStyle} type="number" value={reportedHealth} onChange={e=>setReportedHealth(e.target.value)} placeholder="e.g. 97"/></Field>
+          <Field label="Note (optional)"><input style={inputStyle} value={note} onChange={e=>setNote(e.target.value)} placeholder="Heavy gaming session, AC on, etc."/></Field>
+        </div>
+        )}
+
         <Button onClick={submit} style={{ justifyContent:"center", marginTop:4 }}><Icon name={isEdit?"check":"plus"} size={15}/> {isEdit?"Save changes":"Save reading"}</Button>
       </div>
     </Modal>
