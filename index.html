@@ -2047,13 +2047,18 @@ function EntryForm({ deviceId, lastEntry, existingEntry, onClose, onSave }){
           </div>
         </Field>
         <Field label="Battery percentage">
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <input type="range" min="0" max="100" step="1" value={percentage===""?0:percentage}
-              onChange={e=>setPercentage(e.target.value)}
-              style={{ flex:1, accentColor:C.teal }}/>
-            <input style={{ ...inputStyle, width:64, textAlign:"center", fontWeight:700 }} type="number" min="0" max="100"
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            <button type="button" onClick={()=>setPercentage(String(Math.max(0, (Number(percentage)||0)-5)))}
+              style={{ width:38, height:38, borderRadius:10, border:`1px solid ${C.border}`, background:C.panel2, color:C.textMuted, fontSize:13, fontWeight:700, cursor:"pointer" }}>−5</button>
+            <button type="button" onClick={()=>setPercentage(String(Math.max(0, (Number(percentage)||0)-1)))}
+              style={{ width:38, height:38, borderRadius:10, border:`1px solid ${C.border}`, background:C.panel2, color:C.text, fontSize:16, fontWeight:700, cursor:"pointer" }}>−</button>
+            <input style={{ ...inputStyle, width:76, textAlign:"center", fontWeight:700, fontSize:18, padding:"10px 6px" }} type="number" min="0" max="100"
               value={percentage} onChange={e=>setPercentage(e.target.value)}/>
-            <span style={{ fontSize:13, color:C.textMuted }}>%</span>
+            <span style={{ fontSize:13, color:C.textMuted, marginRight:2 }}>%</span>
+            <button type="button" onClick={()=>setPercentage(String(Math.min(100, (Number(percentage)||0)+1)))}
+              style={{ width:38, height:38, borderRadius:10, border:`1px solid ${C.border}`, background:C.panel2, color:C.text, fontSize:16, fontWeight:700, cursor:"pointer" }}>+</button>
+            <button type="button" onClick={()=>setPercentage(String(Math.min(100, (Number(percentage)||0)+5)))}
+              style={{ width:38, height:38, borderRadius:10, border:`1px solid ${C.border}`, background:C.panel2, color:C.textMuted, fontSize:13, fontWeight:700, cursor:"pointer" }}>+5</button>
           </div>
         </Field>
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13.5, color:C.text }}><input type="checkbox" checked={charging} onChange={e=>setCharging(e.target.checked)}/> Plugged in / charging right now</label>
